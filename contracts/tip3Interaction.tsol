@@ -1,0 +1,48 @@
+pragma ever-solidity >= 0.61.2;
+pragma AbiHeader expire;
+pragma AbiHeader pubkey;
+
+import 'tip3/contracts/interfaces/ITokenRoot.sol';
+import "tip3/contracts/interfaces/ITokenWallet.sol";
+
+contract Interaction { 
+    uint256 static nonce;
+    uint256 state;
+
+
+    constructor (address remainingGasTo) public {
+        tvm.accept();
+        tvm.rawReserve(1 ever, 0);
+        state = 1;
+
+        address(remainingGasTo).transfer({value:0, flag: 128, bounce: false});
+
+    }
+
+    function transfer(address tokenAddress, address receiver, uint128 amount) external{
+        require(msg.sender !=address(0), 1100 );
+        require(tokenAddress !=address(0), 1000 );
+        tvm.accept();
+        tvm.rawReserve(1 ever, 0);
+
+        ITokenRoot tokenRoot=ITokenRoot(tokenAddress);
+        address senderWalletAddress=tokenRoot.walletOf(address(msg.sender));
+
+        ITokenWallet tokenWallet = ITokenWallet(senderWalletAddress);
+        uint128 senderBalance = tokenWallet.balance();
+        TvmCell empty;
+        if(senderBalance != 0){
+            tokenWallet.transfer{ value: 0, flag: 128 }(
+                    amount,
+                    receiver,
+                    0.1 ever, // this parameter allows to deploy wallet for user, if it's not deployed yet. (fee takes from message so will be payed by user)
+                    msg.sender,
+                    false,
+                    empty
+                );
+        }else{
+            msg.sender.transfer({ value: 0, flag: 128, bounce: false});
+        }
+    }
+
+}
